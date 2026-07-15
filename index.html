@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Modular Menu Designer</title>
+    <link rel="stylesheet" href="styles.css?v=38">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Menu Builder</p>
+          <h1>模块化菜单编辑器</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="zoom-control" for="zoomRange">
+            <span>缩放</span>
+            <input id="zoomRange" type="range" min="40" max="140" step="5" value="100">
+            <strong id="zoomValue">100%</strong>
+          </label>
+          <label class="toggle-control" title="拖动和缩放时吸附到网格">
+            <input id="snapToggle" type="checkbox" checked>
+            <span>吸附</span>
+          </label>
+          <button id="exportProject">保存工程</button>
+          <button id="importProject">导入工程</button>
+          <button class="icon-button" id="resetDemo" title="恢复示例数据">↺</button>
+          <select id="imageFormat" class="format-select" aria-label="导出图片格式">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+          <select id="colorSpace" class="format-select wide-format" aria-label="导出色彩空间">
+            <option value="srgb">sRGB</option>
+            <option value="cmyk">CMYK</option>
+          </select>
+          <select id="exportScale" class="format-select" aria-label="导出倍率">
+            <option value="1">1x</option>
+            <option value="2" selected>2x</option>
+            <option value="3">3x</option>
+          </select>
+          <button id="exportImage">导出图片</button>
+          <button class="primary-button" id="printPdf">导出 PDF</button>
+          <input id="projectFile" type="file" accept="application/json,.json" hidden>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="panel">
+          <div class="panel-section">
+            <label class="field-label" for="pageSelect">当前页面</label>
+            <select id="pageSelect"></select>
+          </div>
+
+          <div class="panel-section compact-grid">
+            <button id="addPage">添加页面</button>
+            <button id="deletePage">删除页面</button>
+          </div>
+
+          <div class="panel-section">
+            <h2>页面信息</h2>
+            <label class="field-label" for="pageKicker">顶部小标题</label>
+            <input id="pageKicker" type="text">
+            <label class="field-label" for="pageTitle">主标题</label>
+            <input id="pageTitle" type="text">
+            <label class="field-label" for="pageWebsite">网站</label>
+            <input id="pageWebsite" type="text">
+            <div class="compact-grid">
+              <div>
+                <label class="field-label" for="pageWidth">页面宽 px</label>
+                <input id="pageWidth" type="number" min="100" max="5000" step="1">
+              </div>
+              <div>
+                <label class="field-label" for="pageHeight">页面高 px</label>
+                <input id="pageHeight" type="number" min="100" max="5000" step="1">
+              </div>
+            </div>
+            <label class="field-label" for="pageBackgroundImage">页面背景图片</label>
+            <input id="pageBackgroundImage" type="file" accept="image/*">
+            <div class="inline-actions">
+              <button id="clearPageBackground">清除背景</button>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="panel-row">
+              <h2>模块</h2>
+              <button id="addSection">添加模块</button>
+            </div>
+            <div id="sectionList" class="section-list"></div>
+          </div>
+
+          <div class="panel-section">
+            <h2>参考图</h2>
+            <div class="reference-grid">
+              <img src="assets/reference-noodles.png" alt="Signature noodles menu reference">
+              <img src="assets/reference-dumplings.png" alt="Dumplings and sides menu reference">
+            </div>
+          </div>
+        </aside>
+
+        <section class="canvas-wrap">
+          <div id="menuCanvas" class="print-stage"></div>
+        </section>
+
+        <aside class="panel editor-panel">
+          <div class="panel-row">
+            <h2>编辑模块</h2>
+            <button id="deleteSection">删除模块</button>
+          </div>
+          <div id="sectionEditor"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="vendor/html2canvas.min.js"></script>
+    <script src="app.js?v=38"></script>
+  </body>
+</html>
