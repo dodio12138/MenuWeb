@@ -156,7 +156,7 @@ const baseSections = {
 };
 
 const demoMenu = {
-  schemaVersion: 38,
+  schemaVersion: 39,
   selectedPage: 0,
   selectedSection: "cold",
   zoom: 100,
@@ -355,7 +355,7 @@ function normalizeState(input) {
   const needsLegendMigration = next.schemaVersion < 11;
   const needsDemoLayoutCleanup = next.schemaVersion < 13;
   const needsTipsMigration = next.schemaVersion < 33;
-  next.schemaVersion = 38;
+  next.schemaVersion = 39;
   next.zoom = Number(next.zoom || 100);
   next.snap = next.snap !== false;
   next.pageSize = normalizePageSize(next.pageSize);
@@ -930,7 +930,7 @@ function renderSectionEditor() {
     <div class="editor-group">
       <div class="panel-row">
         <h3>餐品条目</h3>
-        <button id="addItem">添加条目</button>
+        <button class="icon-action" id="addItem" title="添加条目" aria-label="添加条目">+</button>
       </div>
       <div id="itemEditors">
         ${section.items.map((item, index) => renderItemEditor(section, item, index)).join("")}
@@ -990,17 +990,19 @@ function renderSectionEditor() {
         </div>
       </div>
       <div class="align-tools">
-        <button data-align="left">左对齐</button>
-        <button data-align="center">水平居中</button>
-        <button data-align="right">右对齐</button>
-        <button data-align="top">顶对齐</button>
-        <button data-align="middle">垂直居中</button>
-        <button data-align="bottom">底对齐</button>
-        <button data-align="same-width">同宽</button>
-        <button data-align="same-height">同高</button>
+        <button class="icon-action" data-align="left" title="左对齐" aria-label="左对齐">⇤</button>
+        <button class="icon-action" data-align="center" title="水平居中" aria-label="水平居中">↔</button>
+        <button class="icon-action" data-align="right" title="右对齐" aria-label="右对齐">⇥</button>
+        <button class="icon-action" data-align="top" title="顶对齐" aria-label="顶对齐">⇡</button>
+        <button class="icon-action" data-align="middle" title="垂直居中" aria-label="垂直居中">↕</button>
+        <button class="icon-action" data-align="bottom" title="底对齐" aria-label="底对齐">⇣</button>
+        <button class="icon-action" data-align="same-width" title="同宽" aria-label="同宽">⇔</button>
+        <button class="icon-action" data-align="same-height" title="同高" aria-label="同高">⇕</button>
       </div>
-      <button id="fillRight">向右填充</button>
-      <button id="fillBottom">向下填充</button>
+      <div class="inline-actions">
+        <button class="icon-action" id="fillRight" title="向右填充" aria-label="向右填充">↦</button>
+        <button class="icon-action" id="fillBottom" title="向下填充" aria-label="向下填充">↧</button>
+      </div>
     </div>
 
     <div class="editor-group">
@@ -1063,7 +1065,7 @@ function renderSectionEditor() {
         ${section.type === "tips" ? `<label><input id="sectionHideTitle" type="checkbox" ${section.hideTitle ? "checked" : ""}> 隐藏标题</label>` : ""}
       </div>
       <div class="inline-actions wrap">
-        <button id="fitSection">按内容适配高度</button>
+        <button class="icon-action wide-icon" id="fitSection" title="按内容适配高度" aria-label="按内容适配高度">⤢</button>
       </div>
     </div>
     ${section.type === "priceGrid" ? `
@@ -1092,7 +1094,7 @@ function renderLogoEditor(section) {
       <input id="logoSince" type="text" value="${escapeHtml(section.logoSince || "")}">
       <label class="field-label" for="logoImage">导入 Logo 图片</label>
       <input id="logoImage" type="file" accept="image/*">
-      <div class="inline-actions"><button id="clearLogoImage">清除图片</button></div>
+      <div class="inline-actions"><button class="icon-action danger" id="clearLogoImage" title="清除图片" aria-label="清除图片">×</button></div>
     </div>
   `;
 }
@@ -1154,7 +1156,7 @@ function renderSocialEditor(section) {
       <input id="socialTiktokImage" type="file" accept="image/*">
       <label class="field-label" for="socialInstagramImage">Instagram 图标</label>
       <input id="socialInstagramImage" type="file" accept="image/*">
-      <div class="inline-actions"><button id="clearSocialImages">清除图标</button></div>
+      <div class="inline-actions"><button class="icon-action danger" id="clearSocialImages" title="清除图标" aria-label="清除图标">×</button></div>
     </div>
   `;
 }
@@ -1164,7 +1166,7 @@ function renderItemEditor(section, item, index) {
     return `
       <div class="item-editor" data-item-index="${index}">
         <strong>分隔线</strong>
-        <div class="inline-actions"><button data-action="delete-item">删除</button></div>
+        <div class="inline-actions"><button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">×</button></div>
       </div>
     `;
   }
@@ -1200,10 +1202,10 @@ function renderItemEditor(section, item, index) {
         <label><input data-field="header" type="checkbox" ${item.header ? "checked" : ""}> 小标题</label>
       </div>
       <div class="inline-actions wrap">
-        <button data-action="move-up">上移</button>
-        <button data-action="move-down">下移</button>
-        <button data-action="insert-divider">插入分隔线</button>
-        <button data-action="delete-item">删除</button>
+        <button class="icon-action" data-action="move-up" title="上移" aria-label="上移">↑</button>
+        <button class="icon-action" data-action="move-down" title="下移" aria-label="下移">↓</button>
+        <button class="icon-action" data-action="insert-divider" title="插入分隔线" aria-label="插入分隔线">─</button>
+        <button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">×</button>
       </div>
     </div>
   `;

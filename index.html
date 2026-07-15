@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Modular Menu Designer</title>
-    <link rel="stylesheet" href="styles.css?v=38">
+    <link rel="stylesheet" href="styles.css?v=39">
   </head>
   <body>
     <div class="app-shell">
@@ -23,9 +23,9 @@
             <input id="snapToggle" type="checkbox" checked>
             <span>吸附</span>
           </label>
-          <button id="exportProject">保存工程</button>
-          <button id="importProject">导入工程</button>
-          <button class="icon-button" id="resetDemo" title="恢复示例数据">↺</button>
+          <button class="icon-button" id="exportProject" title="保存工程" aria-label="保存工程">↓</button>
+          <button class="icon-button" id="importProject" title="导入工程" aria-label="导入工程">↑</button>
+          <button class="icon-button" id="resetDemo" title="恢复示例数据" aria-label="恢复示例数据">↺</button>
           <select id="imageFormat" class="format-select" aria-label="导出图片格式">
             <option value="png">PNG</option>
             <option value="jpeg">JPEG</option>
@@ -39,8 +39,8 @@
             <option value="2" selected>2x</option>
             <option value="3">3x</option>
           </select>
-          <button id="exportImage">导出图片</button>
-          <button class="primary-button" id="printPdf">导出 PDF</button>
+          <button id="exportImage" title="导出图片">导出图片</button>
+          <button class="primary-button" id="printPdf" title="导出 PDF">导出 PDF</button>
           <input id="projectFile" type="file" accept="application/json,.json" hidden>
         </div>
       </header>
@@ -53,8 +53,8 @@
           </div>
 
           <div class="panel-section compact-grid">
-            <button id="addPage">添加页面</button>
-            <button id="deletePage">删除页面</button>
+            <button class="icon-action" id="addPage" title="添加页面" aria-label="添加页面">+</button>
+            <button class="icon-action danger" id="deletePage" title="删除页面" aria-label="删除页面">×</button>
           </div>
 
           <div class="panel-section">
@@ -78,14 +78,14 @@
             <label class="field-label" for="pageBackgroundImage">页面背景图片</label>
             <input id="pageBackgroundImage" type="file" accept="image/*">
             <div class="inline-actions">
-              <button id="clearPageBackground">清除背景</button>
+              <button class="icon-action danger" id="clearPageBackground" title="清除背景" aria-label="清除背景">×</button>
             </div>
           </div>
 
           <div class="panel-section">
             <div class="panel-row">
               <h2>模块</h2>
-              <button id="addSection">添加模块</button>
+              <button class="icon-action" id="addSection" title="添加模块" aria-label="添加模块">+</button>
             </div>
             <div id="sectionList" class="section-list"></div>
           </div>
@@ -106,7 +106,7 @@
         <aside class="panel editor-panel">
           <div class="panel-row">
             <h2>编辑模块</h2>
-            <button id="deleteSection">删除模块</button>
+            <button class="icon-action danger" id="deleteSection" title="删除模块" aria-label="删除模块">×</button>
           </div>
           <div id="sectionEditor"></div>
         </aside>
@@ -114,6 +114,6 @@
     </div>
 
     <script src="vendor/html2canvas.min.js"></script>
-    <script src="app.js?v=38"></script>
+    <script src="app.js?v=39"></script>
   </body>
 </html>
