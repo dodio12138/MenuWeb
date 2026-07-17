@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Modular Menu Designer</title>
-    <link rel="stylesheet" href="styles.css?v=44">
+    <link rel="stylesheet" href="styles.css?v=70">
   </head>
   <body>
     <svg class="icon-sprite" aria-hidden="true">
@@ -13,6 +13,8 @@
       <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v6h6"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 4h6"/><path d="M9 4a3 3 0 0 0 6 0"/><path d="M8 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><path d="m18 6-12 12"/><path d="m6 6 12 12"/></symbol>
       <symbol id="i-align-left" viewBox="0 0 24 24"><path d="M6 4v16"/><path d="M10 8h8"/><path d="M10 16h6"/></symbol>
       <symbol id="i-align-center-h" viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M6 8h12"/><path d="M8 16h8"/></symbol>
@@ -39,9 +41,10 @@
         <div class="topbar-actions">
           <label class="zoom-control" for="zoomRange">
             <span>缩放</span>
-            <input id="zoomRange" type="range" min="40" max="140" step="5" value="100">
+            <input id="zoomRange" type="range" min="20" max="300" step="5" value="100">
             <strong id="zoomValue">100%</strong>
           </label>
+          <button class="icon-button" id="centerCanvas" title="回到画布中心" aria-label="回到画布中心"><svg class="icon"><use href="#i-expand"></use></svg></button>
           <label class="toggle-control" title="拖动和缩放时吸附到网格">
             <input id="snapToggle" type="checkbox" checked>
             <span>吸附</span>
@@ -69,7 +72,7 @@
       </header>
 
       <main class="workspace">
-        <aside class="panel">
+        <aside class="panel page-panel">
           <div class="panel-section">
             <label class="field-label" for="pageSelect">当前页面</label>
             <select id="pageSelect"></select>
@@ -81,15 +84,22 @@
           </div>
 
           <div class="panel-section">
-            <h2>页面信息</h2>
-            <label class="field-label" for="pageKicker">顶部小标题</label>
-            <input id="pageKicker" type="text">
-            <label class="field-label" for="pageTitle">主标题</label>
-            <input id="pageTitle" type="text">
-            <label class="field-label" for="pageWebsite">网站</label>
-            <input id="pageWebsite" type="text">
-            <div class="compact-grid">
-              <div>
+            <h2>页面设置</h2>
+            <div class="property-grid page-preset-grid">
+              <div class="property-field">
+                <label class="field-label" for="pageSettingsScope">设置范围</label>
+                <select id="pageSettingsScope">
+                  <option value="linked">联动所有</option>
+                  <option value="current">仅当前页</option>
+                </select>
+              </div>
+              <div class="property-field">
+                <label class="field-label">页面内容</label>
+                <input type="text" value="画布参数" disabled>
+              </div>
+            </div>
+            <div class="property-grid page-preset-grid">
+              <div class="property-field">
                 <label class="field-label" for="pagePreset">打印尺寸</label>
                 <select id="pagePreset">
                   <option value="custom">自定义</option>
@@ -100,7 +110,7 @@
                   <option value="b5">B5</option>
                 </select>
               </div>
-              <div>
+              <div class="property-field">
                 <label class="field-label" for="pageOrientation">页面方向</label>
                 <select id="pageOrientation">
                   <option value="landscape">横向</option>
@@ -108,21 +118,51 @@
                 </select>
               </div>
             </div>
-            <div class="compact-grid">
-              <div>
+            <div class="property-grid page-preset-grid">
+              <div class="property-field">
+                <label class="field-label" for="pageFoldMode">折叠方式</label>
+                <select id="pageFoldMode">
+                  <option value="none">不折叠</option>
+                  <option value="bi">双折叠</option>
+                  <option value="tri">三折叠</option>
+                </select>
+              </div>
+              <div class="property-field">
+                <label class="field-label">整张图纸</label>
+                <input type="text" value="单页导出" disabled>
+              </div>
+            </div>
+            <div class="property-grid">
+              <div class="property-field">
                 <label class="field-label" for="pageWidth">页面宽 px</label>
                 <input id="pageWidth" type="number" min="100" max="5000" step="1">
               </div>
-              <div>
+              <div class="property-field">
                 <label class="field-label" for="pageHeight">页面高 px</label>
                 <input id="pageHeight" type="number" min="100" max="5000" step="1">
               </div>
+              <div class="property-field">
+                <label class="field-label" for="pageMargin">页边距 px</label>
+                <input id="pageMargin" type="number" min="0" max="180" step="1">
+              </div>
             </div>
-            <label class="field-label" for="pageMargin">页边距 / 网格边距 px</label>
-            <input id="pageMargin" type="number" min="0" max="180" step="1">
+            <div class="property-grid fold-margin-grid" id="foldMarginGrid">
+              <div class="property-field">
+                <label class="field-label" for="foldMargin1">栏 1 边距</label>
+                <input id="foldMargin1" type="number" min="0" max="120" step="1">
+              </div>
+              <div class="property-field">
+                <label class="field-label" for="foldMargin2">栏 2 边距</label>
+                <input id="foldMargin2" type="number" min="0" max="120" step="1">
+              </div>
+              <div class="property-field">
+                <label class="field-label" for="foldMargin3">栏 3 边距</label>
+                <input id="foldMargin3" type="number" min="0" max="120" step="1">
+              </div>
+            </div>
             <label class="field-label" for="pageBackgroundImage">页面背景图片</label>
-            <input id="pageBackgroundImage" type="file" accept="image/*">
-            <div class="inline-actions">
+            <div class="asset-row">
+              <input id="pageBackgroundImage" type="file" accept="image/*">
               <button class="icon-action danger" id="clearPageBackground" title="清除背景" aria-label="清除背景"><svg class="icon"><use href="#i-x"></use></svg></button>
             </div>
           </div>
@@ -135,13 +175,6 @@
             <div id="sectionList" class="section-list"></div>
           </div>
 
-          <div class="panel-section">
-            <h2>参考图</h2>
-            <div class="reference-grid">
-              <img src="assets/reference-noodles.png" alt="Signature noodles menu reference">
-              <img src="assets/reference-dumplings.png" alt="Dumplings and sides menu reference">
-            </div>
-          </div>
         </aside>
 
         <section class="canvas-wrap">
@@ -151,14 +184,86 @@
         <aside class="panel editor-panel">
           <div class="panel-row">
             <h2>编辑模块</h2>
-            <button class="icon-action danger" id="deleteSection" title="删除模块" aria-label="删除模块"><svg class="icon"><use href="#i-trash"></use></svg></button>
+            <div class="panel-tools">
+              <button class="icon-action" id="copySection" title="复制模块" aria-label="复制模块"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              <button class="icon-action" id="pasteSection" title="粘贴模块" aria-label="粘贴模块"><svg class="icon"><use href="#i-clipboard"></use></svg></button>
+              <button class="icon-action danger" id="deleteSection" title="删除模块" aria-label="删除模块"><svg class="icon"><use href="#i-trash"></use></svg></button>
+            </div>
           </div>
           <div id="sectionEditor"></div>
         </aside>
       </main>
     </div>
 
+    <dialog id="newPageDialog" class="app-dialog">
+      <form id="newPageForm" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">New Page</p>
+            <h2>新建空白页</h2>
+          </div>
+          <button class="icon-action" value="cancel" formmethod="dialog" title="关闭" aria-label="关闭"><svg class="icon"><use href="#i-x"></use></svg></button>
+        </div>
+        <div class="dialog-body">
+          <label class="field-label" for="newPageName">页面名称</label>
+          <input id="newPageName" type="text" value="New Page">
+          <div class="property-grid page-preset-grid">
+            <div class="property-field">
+              <label class="field-label" for="newPagePreset">打印尺寸</label>
+              <select id="newPagePreset">
+                <option value="custom">自定义</option>
+                <option value="a3">A3</option>
+                <option value="a4">A4</option>
+                <option value="a5">A5</option>
+                <option value="b4">B4</option>
+                <option value="b5">B5</option>
+              </select>
+            </div>
+            <div class="property-field">
+              <label class="field-label" for="newPageOrientation">页面方向</label>
+              <select id="newPageOrientation">
+                <option value="landscape">横向</option>
+                <option value="portrait">竖向</option>
+              </select>
+            </div>
+          </div>
+          <div class="property-grid">
+            <div class="property-field">
+              <label class="field-label" for="newPageWidth">页面宽 px</label>
+              <input id="newPageWidth" type="number" min="100" max="5000" step="1">
+            </div>
+            <div class="property-field">
+              <label class="field-label" for="newPageHeight">页面高 px</label>
+              <input id="newPageHeight" type="number" min="100" max="5000" step="1">
+            </div>
+            <div class="property-field">
+              <label class="field-label" for="newPageMargin">页边距 px</label>
+              <input id="newPageMargin" type="number" min="0" max="180" step="1">
+            </div>
+          </div>
+          <div class="property-grid page-preset-grid">
+            <div class="property-field">
+              <label class="field-label" for="newPageFoldMode">折叠方式</label>
+              <select id="newPageFoldMode">
+                <option value="none">不折叠</option>
+                <option value="bi">双折叠</option>
+                <option value="tri">三折叠</option>
+              </select>
+            </div>
+            <div class="property-field">
+              <label class="field-label">页面内容</label>
+              <input type="text" value="空白页" disabled>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button value="cancel" formmethod="dialog">取消</button>
+          <button class="primary-button" id="confirmNewPage" value="default">创建</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="vendor/html2canvas.min.js"></script>
-    <script src="app.js?v=44"></script>
+    <script src="app.js?v=70"></script>
   </body>
 </html>
