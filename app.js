@@ -12,6 +12,7 @@ const DEFAULT_TITLE_STROKE = "#e9c6c8";
 const ICE_CREAM_TITLE_BG = "#eaf6ff";
 const DEFAULT_BLOCK_RADIUS = 9;
 const DEFAULT_TITLE_RADIUS = 0;
+const DEFAULT_SECTION_PADDING = 14;
 const PAPER_PRESETS = {
   custom: { label: "自定义", widthMm: DEFAULT_PRINT_WIDTH_MM, heightMm: DEFAULT_PRINT_HEIGHT_MM },
   a3: { label: "A3", widthMm: 297, heightMm: 420 },
@@ -184,7 +185,7 @@ const baseSections = {
 };
 
 const demoMenu = {
-  schemaVersion: 43,
+  schemaVersion: 44,
   selectedPage: 0,
   selectedSection: "cold",
   zoom: 100,
@@ -397,7 +398,7 @@ function normalizeState(input) {
   const needsDemoLayoutCleanup = next.schemaVersion < 13;
   const needsTipsMigration = next.schemaVersion < 33;
   const needsPageInfoMigration = next.schemaVersion < 43;
-  next.schemaVersion = 43;
+  next.schemaVersion = 44;
   next.zoom = Number(next.zoom || 100);
   next.snap = next.snap !== false;
   next.pageMargin = normalizePageMargin(next.pageMargin);
@@ -477,6 +478,7 @@ function normalizeSection(section, index, total) {
   section.titleScale = Number(section.titleScale || 1);
   section.blockRadius = normalizeRadius(section.blockRadius, DEFAULT_BLOCK_RADIUS);
   section.titleRadius = normalizeRadius(section.titleRadius, DEFAULT_TITLE_RADIUS);
+  section.sectionPadding = normalizeSectionPadding(section.sectionPadding, defaultSectionPadding(section));
   section.titleBgColor = normalizeColor(section.titleBgColor, defaultTitleBgColor(section));
   section.titleStrokeColor = normalizeColor(section.titleStrokeColor, defaultTitleStrokeColor(section));
   section.boldTitle = section.boldTitle !== false;
@@ -595,6 +597,17 @@ function normalizeColor(value, fallback) {
 
 function normalizeRadius(value, fallback) {
   return clamp(Number.isFinite(Number(value)) ? Number(value) : fallback, 0, 40);
+}
+
+function normalizeSectionPadding(value, fallback = DEFAULT_SECTION_PADDING) {
+  return clamp(Number.isFinite(Number(value)) ? Number(value) : fallback, 0, 48);
+}
+
+function defaultSectionPadding(section = {}) {
+  if (["logo", "social", "pageInfo"].includes(section.type)) return 0;
+  if (section.type === "tips") return 6;
+  if (section.className === "large" || ["xiaomian", "topping"].includes(section.id)) return 10;
+  return DEFAULT_SECTION_PADDING;
 }
 
 function saveState() {
@@ -808,6 +821,7 @@ function renderSection(section, pageIndex) {
     `--title-radius:${normalizeRadius(section.titleRadius, DEFAULT_TITLE_RADIUS)}px`,
     `--title-bg:${normalizeColor(section.titleBgColor, defaultTitleBgColor(section))}`,
     `--title-stroke:${normalizeColor(section.titleStrokeColor, defaultTitleStrokeColor(section))}`,
+    `--section-padding:${normalizeSectionPadding(section.sectionPadding, defaultSectionPadding(section))}px`,
     `--item-gap:${Number(section.itemGap ?? defaultItemGap(section))}px`
   ].join(";");
   const selected = pageIndex === state.selectedPage && section.id === state.selectedSection;
@@ -1172,6 +1186,10 @@ function renderSectionEditor() {
           <input id="sectionTitleRadius" type="number" min="0" max="40" step="1" value="${normalizeRadius(section.titleRadius, DEFAULT_TITLE_RADIUS)}">
         </div>
         <div>
+          <label class="field-label" for="sectionPadding">模块内边距 px</label>
+          <input id="sectionPadding" type="number" min="0" max="48" step="1" value="${normalizeSectionPadding(section.sectionPadding, defaultSectionPadding(section))}">
+        </div>
+        <div>
           <label class="field-label" for="sectionItemGap">条目间距 px</label>
           <input id="sectionItemGap" type="number" min="0" max="32" step="1" value="${Number(section.itemGap ?? defaultItemGap(section))}">
         </div>
@@ -1397,6 +1415,7 @@ function bindSectionEditor(section) {
   bindValue("#sectionTitleStrokeColor", "titleStrokeColor", section, (value) => normalizeColor(value, defaultTitleStrokeColor(section)));
   bindValue("#sectionBlockRadius", "blockRadius", section, (value) => normalizeRadius(value, DEFAULT_BLOCK_RADIUS));
   bindValue("#sectionTitleRadius", "titleRadius", section, (value) => normalizeRadius(value, DEFAULT_TITLE_RADIUS));
+  bindValue("#sectionPadding", "sectionPadding", section, (value) => normalizeSectionPadding(value, defaultSectionPadding(section)));
   bindValue("#sectionItemGap", "itemGap", section, Number);
 
   ["X", "Y", "W", "H"].forEach((key) => {
@@ -1639,6 +1658,7 @@ function createSection() {
     titleScale: 1,
     blockRadius: DEFAULT_BLOCK_RADIUS,
     titleRadius: DEFAULT_TITLE_RADIUS,
+    sectionPadding: DEFAULT_SECTION_PADDING,
     titleBgColor: DEFAULT_TITLE_BG,
     titleStrokeColor: DEFAULT_TITLE_STROKE,
     boldTitle: true,

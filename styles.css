@@ -478,7 +478,7 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 0;
+  padding: var(--section-padding, 0);
 }
 
 .page-info-content {
@@ -706,15 +706,15 @@ textarea {
 }
 
 .block-body {
-  padding: 12px 16px 14px;
+  padding: var(--section-padding, 14px);
   flex: 1;
   min-height: 0;
 }
 
 .block-body > .block-title {
-  margin: 10px -16px 8px;
-  padding-left: 16px;
-  padding-right: 16px;
+  margin: 10px calc(var(--section-padding, 14px) * -1) 8px;
+  padding-left: var(--section-padding, 14px);
+  padding-right: var(--section-padding, 14px);
   border-top: 1px solid var(--title-stroke, var(--line));
   border-bottom: 1px solid var(--title-stroke, var(--line));
   border-radius: var(--title-radius, 0);
@@ -734,12 +734,12 @@ textarea {
 }
 
 .menu-block.large .block-body {
-  padding: 8px 14px 10px;
+  padding: var(--section-padding, 10px);
 }
 
 .menu-block.large .block-body > .block-title {
-  margin-left: -14px;
-  margin-right: -14px;
+  margin-left: calc(var(--section-padding, 10px) * -1);
+  margin-right: calc(var(--section-padding, 10px) * -1);
 }
 
 .menu-item {
@@ -812,7 +812,7 @@ textarea {
 }
 
 .tips-block .block-body {
-  padding: 5px 8px 6px;
+  padding: var(--section-padding, 6px);
 }
 
 .tips-content {
@@ -1077,7 +1077,7 @@ textarea {
 .social-block .block-body {
   display: flex;
   align-items: center;
-  padding: 0;
+  padding: var(--section-padding, 0);
 }
 
 .social-content {
