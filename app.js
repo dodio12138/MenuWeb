@@ -2,14 +2,42 @@ const STORAGE_KEY = "granny-menu-builder-v2";
 const OLD_STORAGE_KEY = "granny-menu-builder-v1";
 const DEFAULT_PAGE_WIDTH = 1180;
 const DEFAULT_PAGE_HEIGHT = Math.round((1180 * 941) / 1672);
+const DEFAULT_PRINT_WIDTH_MM = 297;
+const DEFAULT_PRINT_HEIGHT_MM = 167.25;
+const PX_PER_MM = DEFAULT_PAGE_WIDTH / DEFAULT_PRINT_WIDTH_MM;
+const DEFAULT_PAGE_MARGIN = 34;
 const SNAP_STEP = 2;
 const DEFAULT_TITLE_BG = "#fff1f3";
 const DEFAULT_TITLE_STROKE = "#e9c6c8";
 const ICE_CREAM_TITLE_BG = "#eaf6ff";
 const DEFAULT_BLOCK_RADIUS = 9;
 const DEFAULT_TITLE_RADIUS = 0;
+const PAPER_PRESETS = {
+  custom: { label: "自定义", widthMm: DEFAULT_PRINT_WIDTH_MM, heightMm: DEFAULT_PRINT_HEIGHT_MM },
+  a3: { label: "A3", widthMm: 297, heightMm: 420 },
+  a4: { label: "A4", widthMm: 210, heightMm: 297 },
+  a5: { label: "A5", widthMm: 148, heightMm: 210 },
+  b4: { label: "B4", widthMm: 250, heightMm: 353 },
+  b5: { label: "B5", widthMm: 176, heightMm: 250 }
+};
 
 const baseSections = {
+  pageInfo: {
+    id: "page-info",
+    type: "pageInfo",
+    title: "Page Info",
+    titleCn: "页面信息",
+    x: 74,
+    y: 0,
+    w: 26,
+    h: 24,
+    autoHeight: false,
+    noBorder: true,
+    transparentBg: true,
+    pageKicker: "Signature Noodles",
+    pageHeading: "Menu",
+    pageWebsite: "www.grannynoodles.co.uk"
+  },
   logo: {
     id: "logo",
     type: "logo",
@@ -156,11 +184,14 @@ const baseSections = {
 };
 
 const demoMenu = {
-  schemaVersion: 39,
+  schemaVersion: 43,
   selectedPage: 0,
   selectedSection: "cold",
   zoom: 100,
   snap: true,
+  pagePreset: "custom",
+  pageOrientation: "landscape",
+  pageMargin: DEFAULT_PAGE_MARGIN,
   pageSize: {
     width: DEFAULT_PAGE_WIDTH,
     height: DEFAULT_PAGE_HEIGHT
@@ -173,6 +204,7 @@ const demoMenu = {
       website: "www.grannynoodles.co.uk",
       showSocial: false,
       sections: [
+        structuredClone(baseSections.pageInfo),
         structuredClone(baseSections.logo),
         structuredClone(baseSections.cold),
         structuredClone(baseSections.glass),
@@ -190,6 +222,12 @@ const demoMenu = {
       website: "www.grannynoodles.co.uk",
       showSocial: false,
       sections: [
+        {
+          ...structuredClone(baseSections.pageInfo),
+          pageKicker: "Dumplings & Sides",
+          pageHeading: "Menu",
+          pageWebsite: "www.grannynoodles.co.uk"
+        },
         {
           id: "dumpling-step",
           type: "priceGrid",
@@ -315,6 +353,9 @@ const els = {
   pageKicker: document.querySelector("#pageKicker"),
   pageTitle: document.querySelector("#pageTitle"),
   pageWebsite: document.querySelector("#pageWebsite"),
+  pagePreset: document.querySelector("#pagePreset"),
+  pageOrientation: document.querySelector("#pageOrientation"),
+  pageMargin: document.querySelector("#pageMargin"),
   pageWidth: document.querySelector("#pageWidth"),
   pageHeight: document.querySelector("#pageHeight"),
   pageBackgroundImage: document.querySelector("#pageBackgroundImage"),
@@ -355,9 +396,15 @@ function normalizeState(input) {
   const needsLegendMigration = next.schemaVersion < 11;
   const needsDemoLayoutCleanup = next.schemaVersion < 13;
   const needsTipsMigration = next.schemaVersion < 33;
-  next.schemaVersion = 39;
+  const needsPageInfoMigration = next.schemaVersion < 43;
+  next.schemaVersion = 43;
   next.zoom = Number(next.zoom || 100);
   next.snap = next.snap !== false;
+  next.pageMargin = normalizePageMargin(next.pageMargin);
+  next.pagePreset = PAPER_PRESETS[next.pagePreset] ? next.pagePreset : "custom";
+  next.pageOrientation = ["landscape", "portrait"].includes(next.pageOrientation)
+    ? next.pageOrientation
+    : inferOrientation(next.pageSize);
   next.pageSize = normalizePageSize(next.pageSize);
   next.selectedPage = Number(next.selectedPage || 0);
   next.pages = Array.isArray(next.pages) && next.pages.length ? next.pages : structuredClone(demoMenu.pages);
@@ -370,6 +417,9 @@ function normalizeState(input) {
     page.backgroundImage ||= "";
     page.socialImages ||= {};
     page.sections = Array.isArray(page.sections) ? page.sections : [];
+    if (needsPageInfoMigration && !page.sections.some((section) => section.type === "pageInfo")) {
+      page.sections.unshift(createPageInfoSection(page, pageIndex));
+    }
     if (page.showBrand && !page.sections.some((section) => section.type === "logo")) {
       page.sections.unshift(structuredClone(baseSections.logo));
     }
@@ -406,6 +456,7 @@ function normalizeState(input) {
       });
     }
     page.sections.forEach((section, sectionIndex) => normalizeSection(section, sectionIndex, page.sections.length));
+    syncPageInfoSection(page);
   });
 
   const page = next.pages[next.selectedPage] || next.pages[0];
@@ -454,6 +505,14 @@ function normalizeSection(section, index, total) {
     section.hideTitle = section.hideTitle === true;
     if (!section.items.length) section.items = structuredClone(baseSections.tips.items);
   }
+  if (section.type === "pageInfo") {
+    section.items = [];
+    section.pageKicker ||= section.title === "Page Info" ? "" : section.pageKicker;
+    section.pageHeading ||= "";
+    section.pageWebsite ||= "";
+    section.noBorder = section.noBorder !== false;
+    section.transparentBg = section.transparentBg !== false;
+  }
   section.noBorder = section.noBorder === true;
   section.transparentBg = section.transparentBg === true;
   if (section.type === "logo" && Number(section.h || 0) < 22) {
@@ -468,6 +527,23 @@ function normalizeSection(section, index, total) {
 
   const legacy = legacyFrame(section, index, total);
   Object.assign(section, legacy);
+}
+
+function createPageInfoSection(page, pageIndex = 0) {
+  const section = structuredClone(baseSections.pageInfo);
+  section.id = pageIndex ? `page-info-${pageIndex}` : "page-info";
+  section.pageKicker = page.kicker || section.pageKicker;
+  section.pageHeading = page.title || section.pageHeading;
+  section.pageWebsite = page.website || section.pageWebsite;
+  return section;
+}
+
+function syncPageInfoSection(page) {
+  const section = page.sections.find((item) => item.type === "pageInfo");
+  if (!section) return;
+  section.pageKicker ||= page.kicker || "";
+  section.pageHeading ||= page.title || "";
+  section.pageWebsite ||= page.website || "";
 }
 
 function legacyFrame(section, index, total) {
@@ -536,8 +612,45 @@ function normalizePageSize(size = {}) {
   };
 }
 
+function normalizePageMargin(value) {
+  return clamp(Number.isFinite(Number(value)) ? Number(value) : DEFAULT_PAGE_MARGIN, 0, 180);
+}
+
 function pageSize() {
   return normalizePageSize(state.pageSize);
+}
+
+function inferOrientation(size = {}) {
+  return Number(size.height || DEFAULT_PAGE_HEIGHT) > Number(size.width || DEFAULT_PAGE_WIDTH) ? "portrait" : "landscape";
+}
+
+function paperSizeFor(preset = state.pagePreset, orientation = state.pageOrientation) {
+  const paper = PAPER_PRESETS[preset] || PAPER_PRESETS.custom;
+  const portrait = {
+    widthMm: Math.min(paper.widthMm, paper.heightMm),
+    heightMm: Math.max(paper.widthMm, paper.heightMm)
+  };
+  if (orientation === "landscape") {
+    return { widthMm: portrait.heightMm, heightMm: portrait.widthMm };
+  }
+  return portrait;
+}
+
+function pixelsFromPaper(preset = state.pagePreset, orientation = state.pageOrientation) {
+  const paper = paperSizeFor(preset, orientation);
+  return normalizePageSize({
+    width: Math.round(paper.widthMm * PX_PER_MM),
+    height: Math.round(paper.heightMm * PX_PER_MM)
+  });
+}
+
+function printSizeMm() {
+  if (state.pagePreset !== "custom") return paperSizeFor();
+  const size = pageSize();
+  return {
+    widthMm: (size.width * DEFAULT_PRINT_WIDTH_MM) / DEFAULT_PAGE_WIDTH,
+    heightMm: (size.height * DEFAULT_PRINT_HEIGHT_MM) / DEFAULT_PAGE_HEIGHT
+  };
 }
 
 function activePage() {
@@ -549,6 +662,10 @@ function activeSection() {
   return page.sections.find((section) => section.id === state.selectedSection) || page.sections[0];
 }
 
+function activePageInfoSection(page = activePage()) {
+  return page.sections.find((section) => section.type === "pageInfo");
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -556,6 +673,10 @@ function escapeHtml(value = "") {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function icon(name) {
+  return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
 }
 
 function render() {
@@ -588,6 +709,9 @@ function renderControls() {
   els.pageKicker.value = page.kicker;
   els.pageTitle.value = page.title;
   els.pageWebsite.value = page.website;
+  els.pagePreset.value = state.pagePreset;
+  els.pageOrientation.value = state.pageOrientation;
+  els.pageMargin.value = Math.round(state.pageMargin);
   els.pageWidth.value = Math.round(state.pageSize.width);
   els.pageHeight.value = Math.round(state.pageSize.height);
   els.zoomRange.value = String(state.zoom);
@@ -612,9 +736,9 @@ function applyPageSize() {
   const size = pageSize();
   document.documentElement.style.setProperty("--page-width", `${size.width}px`);
   document.documentElement.style.setProperty("--page-height", `${size.height}px`);
+  document.documentElement.style.setProperty("--page-margin", `${normalizePageMargin(state.pageMargin)}px`);
 
-  const printWidthMm = (size.width * 297) / DEFAULT_PAGE_WIDTH;
-  const printHeightMm = (size.height * 167.25) / DEFAULT_PAGE_HEIGHT;
+  const { widthMm: printWidthMm, heightMm: printHeightMm } = printSizeMm();
   let style = document.querySelector("#dynamicPrintSize");
   if (!style) {
     style = document.createElement("style");
@@ -639,12 +763,6 @@ function renderPage(page, pageIndex) {
   return `
     <article class="menu-page" data-page-index="${pageIndex}">
       ${background}
-      <div class="menu-title">
-        <div class="menu-kicker">${escapeHtml(page.kicker)}</div>
-        <div class="menu-heading">${escapeHtml(page.title)}</div>
-        <div class="title-rule"></div>
-        <div class="menu-website">${escapeHtml(page.website)}</div>
-      </div>
       <div class="sections-grid">
         ${page.sections.map((section) => renderSection(section, pageIndex)).join("")}
         ${renderArrows(page)}
@@ -695,6 +813,7 @@ function renderSection(section, pageIndex) {
   const selected = pageIndex === state.selectedPage && section.id === state.selectedSection;
   const classes = [
     "menu-block",
+    section.type === "pageInfo" ? "page-info-block" : "",
     section.type === "logo" ? "logo-block" : "",
     section.type === "social" ? "social-block" : "",
     section.type === "tips" ? "tips-block" : "",
@@ -718,7 +837,7 @@ function renderSection(section, pageIndex) {
 }
 
 function renderSectionHeader(section) {
-  if (["logo", "legend", "social"].includes(section.type)) return "";
+  if (["logo", "legend", "social", "pageInfo"].includes(section.type)) return "";
   if (section.type === "tips" && section.hideTitle) return "";
   if (section.type === "priceGrid" || section.type === "stepList") {
     return `
@@ -741,6 +860,7 @@ function renderSectionHeader(section) {
 }
 
 function renderSectionBody(section) {
+  if (section.type === "pageInfo") return renderPageInfo(section);
   if (section.type === "logo") return renderLogo(section);
   if (section.type === "legend") return renderLegend(section);
   if (section.type === "social") return renderSocial(section);
@@ -749,6 +869,17 @@ function renderSectionBody(section) {
   if (section.type === "stepList") return renderStepList(section);
   if (section.type === "flavourGrid") return renderFlavourGrid(section);
   return renderList(section);
+}
+
+function renderPageInfo(section) {
+  return `
+    <div class="page-info-content">
+      <div class="page-info-kicker">${escapeHtml(section.pageKicker || "")}</div>
+      <div class="page-info-heading">${escapeHtml(section.pageHeading || "Menu")}</div>
+      <div class="page-info-rule"></div>
+      <div class="page-info-website">${escapeHtml(section.pageWebsite || "")}</div>
+    </div>
+  `;
 }
 
 function renderLegend(section) {
@@ -924,13 +1055,14 @@ function renderSectionEditor() {
   }
 
   const logoEditor = section.type === "logo" ? renderLogoEditor(section) : "";
+  const pageInfoEditor = section.type === "pageInfo" ? renderPageInfoEditor(section) : "";
   const legendEditor = section.type === "legend" ? renderLegendEditor(section) : "";
   const socialEditor = section.type === "social" ? renderSocialEditor(section) : "";
-  const itemEditor = ["logo", "legend", "social"].includes(section.type) ? "" : `
+  const itemEditor = ["logo", "legend", "social", "pageInfo"].includes(section.type) ? "" : `
     <div class="editor-group">
       <div class="panel-row">
         <h3>餐品条目</h3>
-        <button class="icon-action" id="addItem" title="添加条目" aria-label="添加条目">+</button>
+        <button class="icon-action" id="addItem" title="添加条目" aria-label="添加条目">${icon("plus")}</button>
       </div>
       <div id="itemEditors">
         ${section.items.map((item, index) => renderItemEditor(section, item, index)).join("")}
@@ -939,6 +1071,13 @@ function renderSectionEditor() {
   `;
 
   els.sectionEditor.innerHTML = `
+    <div class="editor-summary">
+      <div>
+        <span>${escapeHtml(section.type)}</span>
+        <strong>${escapeHtml(section.title || "未命名模块")}</strong>
+      </div>
+      <em>${Math.round(section.x)}%, ${Math.round(section.y)}% · ${Math.round(section.w)}×${Math.round(section.h)}</em>
+    </div>
     <div class="editor-group">
       <h3>模块身份</h3>
       <label class="field-label" for="sectionTitle">模块标题</label>
@@ -949,7 +1088,7 @@ function renderSectionEditor() {
         <div>
           <label class="field-label" for="sectionType">模块类型</label>
           <select id="sectionType">
-            ${["list", "priceGrid", "stepList", "flavourGrid", "tips", "logo", "legend", "social"].map((type) => `<option value="${type}" ${section.type === type ? "selected" : ""}>${type}</option>`).join("")}
+            ${["list", "priceGrid", "stepList", "flavourGrid", "tips", "pageInfo", "logo", "legend", "social"].map((type) => `<option value="${type}" ${section.type === type ? "selected" : ""}>${type}</option>`).join("")}
           </select>
         </div>
         <div>
@@ -990,18 +1129,18 @@ function renderSectionEditor() {
         </div>
       </div>
       <div class="align-tools">
-        <button class="icon-action" data-align="left" title="左对齐" aria-label="左对齐">⇤</button>
-        <button class="icon-action" data-align="center" title="水平居中" aria-label="水平居中">↔</button>
-        <button class="icon-action" data-align="right" title="右对齐" aria-label="右对齐">⇥</button>
-        <button class="icon-action" data-align="top" title="顶对齐" aria-label="顶对齐">⇡</button>
-        <button class="icon-action" data-align="middle" title="垂直居中" aria-label="垂直居中">↕</button>
-        <button class="icon-action" data-align="bottom" title="底对齐" aria-label="底对齐">⇣</button>
-        <button class="icon-action" data-align="same-width" title="同宽" aria-label="同宽">⇔</button>
-        <button class="icon-action" data-align="same-height" title="同高" aria-label="同高">⇕</button>
+        <button class="icon-action" data-align="left" title="左对齐" aria-label="左对齐">${icon("align-left")}</button>
+        <button class="icon-action" data-align="center" title="水平居中" aria-label="水平居中">${icon("align-center-h")}</button>
+        <button class="icon-action" data-align="right" title="右对齐" aria-label="右对齐">${icon("align-right")}</button>
+        <button class="icon-action" data-align="top" title="顶对齐" aria-label="顶对齐">${icon("align-top")}</button>
+        <button class="icon-action" data-align="middle" title="垂直居中" aria-label="垂直居中">${icon("align-center-v")}</button>
+        <button class="icon-action" data-align="bottom" title="底对齐" aria-label="底对齐">${icon("align-bottom")}</button>
+        <button class="icon-action" data-align="same-width" title="同宽" aria-label="同宽">${icon("width")}</button>
+        <button class="icon-action" data-align="same-height" title="同高" aria-label="同高">${icon("height")}</button>
       </div>
       <div class="inline-actions">
-        <button class="icon-action" id="fillRight" title="向右填充" aria-label="向右填充">↦</button>
-        <button class="icon-action" id="fillBottom" title="向下填充" aria-label="向下填充">↧</button>
+        <button class="icon-action" id="fillRight" title="向右填充" aria-label="向右填充">${icon("fill-right")}</button>
+        <button class="icon-action" id="fillBottom" title="向下填充" aria-label="向下填充">${icon("fill-down")}</button>
       </div>
     </div>
 
@@ -1065,7 +1204,7 @@ function renderSectionEditor() {
         ${section.type === "tips" ? `<label><input id="sectionHideTitle" type="checkbox" ${section.hideTitle ? "checked" : ""}> 隐藏标题</label>` : ""}
       </div>
       <div class="inline-actions wrap">
-        <button class="icon-action wide-icon" id="fitSection" title="按内容适配高度" aria-label="按内容适配高度">⤢</button>
+        <button class="icon-action wide-icon" id="fitSection" title="按内容适配高度" aria-label="按内容适配高度">${icon("expand")}</button>
       </div>
     </div>
     ${section.type === "priceGrid" ? `
@@ -1073,6 +1212,7 @@ function renderSectionEditor() {
       <input id="sectionHeaders" type="text" value="${escapeHtml((section.headers || []).join(", "))}">
     ` : ""}
     ${section.type === "flavourGrid" ? renderFlavourDealEditor(section) : ""}
+    ${pageInfoEditor}
     ${logoEditor}
     ${legendEditor}
     ${socialEditor}
@@ -1080,6 +1220,20 @@ function renderSectionEditor() {
   `;
 
   bindSectionEditor(section);
+}
+
+function renderPageInfoEditor(section) {
+  return `
+    <div class="editor-group">
+      <h3>页面信息模块</h3>
+      <label class="field-label" for="pageInfoKicker">顶部小标题</label>
+      <input id="pageInfoKicker" type="text" value="${escapeHtml(section.pageKicker || "")}">
+      <label class="field-label" for="pageInfoHeading">主标题</label>
+      <input id="pageInfoHeading" type="text" value="${escapeHtml(section.pageHeading || "")}">
+      <label class="field-label" for="pageInfoWebsite">网站</label>
+      <input id="pageInfoWebsite" type="text" value="${escapeHtml(section.pageWebsite || "")}">
+    </div>
+  `;
 }
 
 function renderLogoEditor(section) {
@@ -1094,7 +1248,7 @@ function renderLogoEditor(section) {
       <input id="logoSince" type="text" value="${escapeHtml(section.logoSince || "")}">
       <label class="field-label" for="logoImage">导入 Logo 图片</label>
       <input id="logoImage" type="file" accept="image/*">
-      <div class="inline-actions"><button class="icon-action danger" id="clearLogoImage" title="清除图片" aria-label="清除图片">×</button></div>
+      <div class="inline-actions"><button class="icon-action danger" id="clearLogoImage" title="清除图片" aria-label="清除图片">${icon("x")}</button></div>
     </div>
   `;
 }
@@ -1156,7 +1310,7 @@ function renderSocialEditor(section) {
       <input id="socialTiktokImage" type="file" accept="image/*">
       <label class="field-label" for="socialInstagramImage">Instagram 图标</label>
       <input id="socialInstagramImage" type="file" accept="image/*">
-      <div class="inline-actions"><button class="icon-action danger" id="clearSocialImages" title="清除图标" aria-label="清除图标">×</button></div>
+      <div class="inline-actions"><button class="icon-action danger" id="clearSocialImages" title="清除图标" aria-label="清除图标">${icon("x")}</button></div>
     </div>
   `;
 }
@@ -1165,13 +1319,22 @@ function renderItemEditor(section, item, index) {
   if (item.divider) {
     return `
       <div class="item-editor" data-item-index="${index}">
-        <strong>分隔线</strong>
-        <div class="inline-actions"><button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">×</button></div>
+        <div class="item-editor-head">
+          <div class="item-editor-summary">
+            <strong>分隔线</strong>
+            <span>Divider</span>
+          </div>
+          <button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">${icon("trash")}</button>
+        </div>
       </div>
     `;
   }
 
   const priceValue = section.type === "priceGrid" ? (item.prices || []).join(", ") : (item.price || "");
+  const itemTitle = item.name || `条目 ${index + 1}`;
+  const itemMeta = [section.type === "tips" ? item.desc : priceValue, item.vegan ? "Vegan" : "", item.recommended ? "推荐" : "", item.spice ? `${item.spice} 辣` : ""]
+    .filter(Boolean)
+    .join(" · ");
   const priceEditor = section.type === "tips" ? "" : `
         <div>
           <label class="field-label">${section.type === "priceGrid" ? "价格（逗号分隔）" : "价格"}</label>
@@ -1179,35 +1342,44 @@ function renderItemEditor(section, item, index) {
         </div>
   `;
   return `
-    <div class="item-editor" data-item-index="${index}">
-      <label class="field-label">名称</label>
-      <textarea data-field="name">${escapeHtml(item.name || "")}</textarea>
-      <label class="field-label">描述</label>
-      <textarea data-field="desc">${escapeHtml(item.desc || "")}</textarea>
-      <div class="compact-grid">
-        ${priceEditor}
-        <div>
-          <label class="field-label">辣度</label>
-          <input data-field="spice" type="number" min="0" max="5" value="${Number(item.spice || 0)}">
+    <details class="item-editor" data-item-index="${index}">
+      <summary class="item-editor-head">
+        <span class="summary-caret">${icon("chevron-down")}</span>
+        <span class="item-editor-summary">
+          <strong>${escapeHtml(itemTitle)}</strong>
+          <span>${escapeHtml(itemMeta || "点击展开编辑")}</span>
+        </span>
+        <span class="item-actions">
+          <button class="icon-action" data-action="move-up" title="上移" aria-label="上移">${icon("arrow-up")}</button>
+          <button class="icon-action" data-action="move-down" title="下移" aria-label="下移">${icon("arrow-down")}</button>
+          <button class="icon-action" data-action="insert-divider" title="插入分隔线" aria-label="插入分隔线">${icon("minus")}</button>
+          <button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">${icon("trash")}</button>
+        </span>
+      </summary>
+      <div class="item-editor-body">
+        <label class="field-label">名称</label>
+        <textarea data-field="name">${escapeHtml(item.name || "")}</textarea>
+        <label class="field-label">描述</label>
+        <textarea data-field="desc">${escapeHtml(item.desc || "")}</textarea>
+        <div class="compact-grid">
+          ${priceEditor}
+          <div>
+            <label class="field-label">辣度</label>
+            <input data-field="spice" type="number" min="0" max="5" value="${Number(item.spice || 0)}">
+          </div>
+          <div>
+            <label class="field-label">单条字号</label>
+            <input data-field="itemScale" type="number" min="0.45" max="2" step="0.05" value="${Number(item.itemScale || 1)}">
+          </div>
         </div>
-        <div>
-          <label class="field-label">单条字号</label>
-          <input data-field="itemScale" type="number" min="0.45" max="2" step="0.05" value="${Number(item.itemScale || 1)}">
+        <div class="checkbox-grid">
+          <label><input data-field="vegan" type="checkbox" ${item.vegan ? "checked" : ""}> Vegan</label>
+          <label><input data-field="recommended" type="checkbox" ${item.recommended ? "checked" : ""}> 推荐</label>
+          <label><input data-field="bold" type="checkbox" ${item.bold ? "checked" : ""}> 加粗</label>
+          <label><input data-field="header" type="checkbox" ${item.header ? "checked" : ""}> 小标题</label>
         </div>
       </div>
-      <div class="checkbox-grid">
-        <label><input data-field="vegan" type="checkbox" ${item.vegan ? "checked" : ""}> Vegan</label>
-        <label><input data-field="recommended" type="checkbox" ${item.recommended ? "checked" : ""}> 推荐</label>
-        <label><input data-field="bold" type="checkbox" ${item.bold ? "checked" : ""}> 加粗</label>
-        <label><input data-field="header" type="checkbox" ${item.header ? "checked" : ""}> 小标题</label>
-      </div>
-      <div class="inline-actions wrap">
-        <button class="icon-action" data-action="move-up" title="上移" aria-label="上移">↑</button>
-        <button class="icon-action" data-action="move-down" title="下移" aria-label="下移">↓</button>
-        <button class="icon-action" data-action="insert-divider" title="插入分隔线" aria-label="插入分隔线">─</button>
-        <button class="icon-action danger" data-action="delete-item" title="删除" aria-label="删除">×</button>
-      </div>
-    </div>
+    </details>
   `;
 }
 
@@ -1245,6 +1417,7 @@ function bindSectionEditor(section) {
   bindChecked("#sectionNoBorder", "noBorder", section);
   bindChecked("#sectionTransparentBg", "transparentBg", section);
   bindChecked("#sectionHideTitle", "hideTitle", section);
+  bindPageInfoInputs(section);
   bindValue("#logoText", "logoText", section);
   bindValue("#logoCn", "logoCn", section);
   bindValue("#logoSince", "logoSince", section);
@@ -1259,6 +1432,7 @@ function bindSectionEditor(section) {
     section.type = typeInput.value;
     if (section.type === "priceGrid" && !section.headers) section.headers = ["6 pcs", "10 pcs"];
     if (section.type === "tips") Object.assign(section, { items: section.items?.length ? section.items : structuredClone(baseSections.tips.items), title: section.title || "Tips", titleCn: section.titleCn || "温馨提示", itemGap: 2, fontScale: section.fontScale || 0.86 });
+    if (section.type === "pageInfo") Object.assign(section, { items: [], pageKicker: activePage().kicker, pageHeading: activePage().title, pageWebsite: activePage().website, noBorder: true, transparentBg: true });
     if (section.type === "logo") Object.assign(section, { items: [], logoText: section.logoText || "Granny Noodles" });
     if (section.type === "legend") Object.assign(section, { items: [], legendText: section.legendText || "Green V - Vegan" });
     if (section.type === "social") Object.assign(section, { items: [], socialHandle: section.socialHandle || "@GRANNYNOODLESUK", socialImages: section.socialImages || {}, noBorder: true, transparentBg: true });
@@ -1320,7 +1494,28 @@ function bindSectionEditor(section) {
       input.addEventListener("change", () => updateItemField(input, item));
     });
     editor.querySelectorAll("[data-action]").forEach((button) => {
-      button.addEventListener("click", () => handleItemAction(section, index, button.dataset.action));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handleItemAction(section, index, button.dataset.action);
+      });
+    });
+  });
+}
+
+function bindPageInfoInputs(section) {
+  if (section.type !== "pageInfo") return;
+  [
+    ["#pageInfoKicker", "pageKicker", "kicker"],
+    ["#pageInfoHeading", "pageHeading", "title"],
+    ["#pageInfoWebsite", "pageWebsite", "website"]
+  ].forEach(([selector, sectionKey, pageKey]) => {
+    const input = document.querySelector(selector);
+    if (!input) return;
+    input.addEventListener("input", () => {
+      section[sectionKey] = input.value;
+      activePage()[pageKey] = input.value;
+      refreshPreview();
     });
   });
 }
@@ -1757,18 +1952,36 @@ els.pageSelect.addEventListener("change", () => {
 });
 
 els.pageKicker.addEventListener("input", () => {
-  activePage().kicker = els.pageKicker.value;
+  const page = activePage();
+  page.kicker = els.pageKicker.value;
+  const info = activePageInfoSection(page);
+  if (info) info.pageKicker = els.pageKicker.value;
   refreshPreview();
 });
 
 els.pageTitle.addEventListener("input", () => {
-  activePage().title = els.pageTitle.value;
+  const page = activePage();
+  page.title = els.pageTitle.value;
+  const info = activePageInfoSection(page);
+  if (info) info.pageHeading = els.pageTitle.value;
   refreshPreview();
 });
 
 els.pageWebsite.addEventListener("input", () => {
-  activePage().website = els.pageWebsite.value;
+  const page = activePage();
+  page.website = els.pageWebsite.value;
+  const info = activePageInfoSection(page);
+  if (info) info.pageWebsite = els.pageWebsite.value;
   refreshPreview();
+});
+
+els.pageMargin.addEventListener("input", () => {
+  state.pageMargin = normalizePageMargin(els.pageMargin.value);
+  renderCanvas();
+  applyPageSize();
+  applyZoom();
+  queueAutoFit();
+  saveState();
 });
 
 els.pageBackgroundImage.addEventListener("change", async (event) => {
@@ -1786,10 +1999,17 @@ els.clearPageBackground.addEventListener("click", () => {
 
 function updatePageSizeFromInputs() {
   if (!els.pageWidth.value || !els.pageHeight.value) return;
+  state.pagePreset = "custom";
+  state.pageOrientation = inferOrientation({
+    width: els.pageWidth.value,
+    height: els.pageHeight.value
+  });
   state.pageSize = normalizePageSize({
     width: els.pageWidth.value,
     height: els.pageHeight.value
   });
+  els.pagePreset.value = state.pagePreset;
+  els.pageOrientation.value = state.pageOrientation;
   renderCanvas();
   applyPageSize();
   applyZoom();
@@ -1799,6 +2019,43 @@ function updatePageSizeFromInputs() {
 
 els.pageWidth.addEventListener("input", updatePageSizeFromInputs);
 els.pageHeight.addEventListener("input", updatePageSizeFromInputs);
+
+function applyPaperSelection() {
+  state.pagePreset = els.pagePreset.value;
+  state.pageOrientation = els.pageOrientation.value;
+  if (state.pagePreset !== "custom") {
+    state.pageSize = pixelsFromPaper(state.pagePreset, state.pageOrientation);
+    els.pageWidth.value = Math.round(state.pageSize.width);
+    els.pageHeight.value = Math.round(state.pageSize.height);
+  }
+  renderCanvas();
+  applyPageSize();
+  applyZoom();
+  queueAutoFit();
+  saveState();
+}
+
+els.pagePreset.addEventListener("change", applyPaperSelection);
+els.pageOrientation.addEventListener("change", () => {
+  if (state.pagePreset === "custom") {
+    const current = normalizePageSize(state.pageSize);
+    state.pageOrientation = els.pageOrientation.value;
+    const shouldSwap = (state.pageOrientation === "landscape" && current.height > current.width)
+      || (state.pageOrientation === "portrait" && current.width > current.height);
+    state.pageSize = shouldSwap
+      ? normalizePageSize({ width: current.height, height: current.width })
+      : current;
+    els.pageWidth.value = Math.round(state.pageSize.width);
+    els.pageHeight.value = Math.round(state.pageSize.height);
+    renderCanvas();
+    applyPageSize();
+    applyZoom();
+    queueAutoFit();
+    saveState();
+    return;
+  }
+  applyPaperSelection();
+});
 
 els.zoomRange.addEventListener("input", () => {
   state.zoom = Number(els.zoomRange.value);
